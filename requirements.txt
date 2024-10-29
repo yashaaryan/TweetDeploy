@@ -1,0 +1,9 @@
+fastapi
+pandas
+pydantic
+tensorflow-cpu
+uvicorn
+python-multipart
+starlette
+tensorflow
+nltk
