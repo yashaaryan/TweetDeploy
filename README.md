@@ -38,25 +38,22 @@ Open your Windows Terminal and follow the next steps:
 1. **Clone the repository:**
 
    ```bash
-   git clone https://github.com/Esteebaan23/XGboost.git
-
-2. Unzip the Statics folder inside the cloned folder
-
-3. Create Viirtual environments
+   git clone https://github.com/Esteebaan23/LSTM_Bert_Deployment.git
+   
+2. Create Viirtual environments
    ```bash
    python -m venv myenv
-   source myenv/bin/activate
-    # On Windows: myenv\Scripts\activate
-4. Replace the data file path in app.py according to your local file path
+   myenv\Scripts\activate
+3. Replace the data file path in app.py according to your local file path
    ```bash
    cd + "Your path"
-5. Install dependencies
+4. Install dependencies
     ```bash
     pip install -r requirements.txt
 
-6. If for some reason scikit-learn, uvicorn and python-multipart don't get installed try:
+5. If for some reason scikit-learn, uvicorn and python-multipart don't get installed try:
    ```bash
    pip install scikit-learn uvicorn python-multipart
 
-7. Then, in your cmd paste:
+6. Then, in your cmd paste:
    ```bash
