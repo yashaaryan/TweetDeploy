@@ -10,13 +10,15 @@ import unicodedata
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 import nltk
+import torch
+from transformers import BertTokenizer, BertForSequenceClassification
 
 
 
-#nltk.download('wordnet')
-#nltk.download('omw-1.4')
-#nltk.download('stopwords')
-#nltk.download('punkt')
+nltk.download('wordnet')
+nltk.download('omw-1.4')
+nltk.download('stopwords')
+nltk.download('punkt')
 
 
 def remove_urls(text):
@@ -62,6 +64,7 @@ def preprocess_text(input_text):
     cleaned_text = re.sub(r"\bain't\b", "am not", cleaned_text, flags=re.IGNORECASE)
     cleaned_text = re.sub(r"\bwe're\b", "we are", cleaned_text, flags=re.IGNORECASE)
     cleaned_text = re.sub(r"\bit's\b", "it is", cleaned_text, flags=re.IGNORECASE)
+    cleaned_text = re.sub(r"\bu\b", "you", cleaned_text, flags=re.IGNORECASE)
 
     cleaned_text = re.sub(r"&gt;", ">", cleaned_text)
     cleaned_text = re.sub(r"&lt;", "<", cleaned_text)
@@ -126,12 +129,31 @@ def process_input_sentence(input_sentence):
     #print(padded_sentence)
     return padded_sentence
 
+def predict_with_bert(sentence):
+    """Realiza la predicción usando el modelo BERT."""
+    sentence = process_tweet_content(sentence)
+    sentence = remove_specific_words(sentence)
+    inputs = tokenizer_bert(sentence, return_tensors="pt", padding=True, truncation=True, max_length=128)
+
+    with torch.no_grad():
+        outputs = model_bert(**inputs)
+        logits = outputs.logits
+
+    predicted_class = torch.argmax(logits, dim=1).item()
+    probability = torch.softmax(logits, dim=1)[0][predicted_class].item()
+    return "REAL" if predicted_class == 1 else "FAKE", probability
 
 
 app = FastAPI()
 
-# Cargar el modelo previamente entrenado
-model = tf.keras.models.load_model('model_LSTM2_best.h5')
+# Cargar el modelo LSTM previamente entrenado
+model_lstm = tf.keras.models.load_model('model_LSTM23_Final.h5')
+
+# Cargar el modelo y el tokenizador BERT
+model_bert = BertForSequenceClassification.from_pretrained('huawei-noah/TinyBERT_General_4L_312D', num_labels=2)
+model_bert.load_state_dict(torch.load('bert_finetuned_model3.pth', map_location=torch.device('cpu')))
+tokenizer_bert = BertTokenizer.from_pretrained('huawei-noah/TinyBERT_General_4L_312D')
+
 
 # Cargar el dataset de pruebas
 train_dataset = pd.read_csv("train.csv", encoding="latin-1")
@@ -176,7 +198,7 @@ max_length = 23
 test_padded_sentences = pad_sequences(tokenize_corpus(test_tweets),maxlen=max_length,padding='post')
 
 
-model = tf.keras.models.load_model('model_LSTM2_best.h5')
+model = tf.keras.models.load_model('model_LSTM23_Final.h5')
 
 pred_probs2 = model.predict(test_padded_sentences)
 preds2 = (pred_probs2 >= 0.6).astype(int)  # Umbral en 0.5
@@ -211,43 +233,28 @@ print(fake_tweets)
 # Generar tablas de tweets reales y falsos
 @app.get("/", response_class=HTMLResponse)
 async def main_page():
-    # Datos de tweets reales y falsos
-    real_tweets = results_df[results_df['Label'] == 'REAL'].head(10).to_html(index=False)
-    fake_tweets = results_df[results_df['Label'] == 'FAKE'].tail(10).to_html(index=False)
-    
-    return f'''
+    return '''
     <html>
         <head>
             <title>Disaster Tweets</title>
             <style>
-                body {{ font-family: Arial, sans-serif; background-color: #f0f2f5; }}
-                h1, h2 {{ text-align: center; color: #333; }}
-                .content {{ max-width: 800px; margin: auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }}
-                table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
-                table, th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-                th {{ background-color: #2BE060; color: white;  text-align: center; }}
-                input[type="text"] {{ width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; }}
-                button {{ background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }}
-                button:hover {{ background-color: #0056b3; }}
-                td:first-child {{ text-align: left; }}
-                td:nth-child(2), #tweetTable td:nth-child(3) {{ text-align: center; }}
+                body { font-family: Arial, sans-serif; background-color: #f0f2f5; }
+                h1, h2 { text-align: center; color: #333; }
+                .content { max-width: 800px; margin: auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+                input[type="text"] { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; }
+                button { background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+                button:hover { background-color: #0056b3; }
             </style>
         </head>
         <body>
             <div class="content">
                 <h1>Disaster Tweets</h1>
-                
-                <h2>Real Disaster Tweets</h2>
-                {real_tweets}
-                
-                <h2>Fake Disaster Tweets</h2>
-                {fake_tweets}
-                
                 <h2>Enter a tweet to predict if it is REAL or FAKE</h2>
                 <form action="/predict" method="post">
                     <input type="text" name="text" placeholder="Enter the text of the tweet" maxlength="280" required/>
                     <div style="text-align: center;">
-                        <button type="submit">Predict</button>
+                        <button type="submit" name="model_type" value="lstm">Predict LSTM</button>
+                        <button type="submit" name="model_type" value="bert">Predict BERT</button>
                     </div>
                 </form>
             </div>
@@ -256,34 +263,75 @@ async def main_page():
     '''
 
 @app.post('/predict', response_class=HTMLResponse)
-async def predict(text: str = Form(...)):
-    processed_text = process_input_sentence(text)
-    prediction = model.predict(processed_text)
-    prediction_label = "REAL" if prediction >= 0.6 else "FAKE"
+async def predict(text: str = Form(...), model_type: str = Form(...)):
+    # Ejecutar predicción con el modelo seleccionado
+    if model_type == "lstm":
+        # Preprocesar y predecir con el modelo LSTM
+        processed_text = process_input_sentence(text)
+        prediction = model_lstm.predict(processed_text)
+        prediction_label = "REAL" if prediction >= 0.6 else "FAKE"
+        probability = prediction[0][0] if prediction >= 0.6 else 1 - prediction[0][0]
+    else:
+        # Predecir con el modelo BERT
+        prediction_label, probability = predict_with_bert(text)
     
+    # Generar respuesta HTML con el resultado de la predicción
     return f"""
     <html>
         <head>
-            <title>Resultado de la Predicción</title>
+            <title>Prediction Result</title>
             <style>
-                body {{ font-family: Arial, sans-serif; background-color: #f0f2f5; }}
-                .content {{ max-width: 600px; margin: auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }}
-                h2 {{ color: #333; text-align: center; }}
-                p {{ font-size: 16px; color: #333; text-align: center; }}
-                button {{ background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; }}
-                button:hover {{ background-color: #0056b3; }}
+                /* Estilos para dar formato al resultado */
+                body {{
+                    font-family: Arial, sans-serif;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    margin: 0;
+                    background-color: #f2f2f2;
+                }}
+                .content {{
+                    background-color: #fff;
+                    padding: 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                    width: 80%;
+                    max-width: 600px;
+                    text-align: center;
+                }}
+                h2 {{
+                    color: #333;
+                    font-size: 24px;
+                    margin-bottom: 10px;
+                }}
+                p {{
+                    font-size: 18px;
+                    color: #555;
+                    margin: 5px 0;
+                }}
+                button {{
+                    padding: 10px 20px;
+                    background-color: #4CAF50;
+                    color: #fff;
+                    border: none;
+                    border-radius: 5px;
+                    font-size: 16px;
+                    cursor: pointer;
+                    margin-top: 15px;
+                }}
+                button:hover {{
+                    background-color: #45a049;
+                }}
             </style>
         </head>
         <body>
             <div class="content">
-                <h2>Resultado de la Predicción</h2>
+                <h2>Prediction Result</h2>
                 <p><strong>Tweet:</strong> {text}</p>
-                <p><strong>Prediction:</strong> {prediction_label}</p>
+                <p><strong>Prediction:</strong> {prediction_label} (Probability: {probability:.2f})</p>
                 <form action="/" method="get">
-                <div style="text-align: center;">
-                     <button type="submit">Back</button>
-                </div>
-                   
+                    <button type="submit">Back</button>
                 </form>
             </div>
         </body>
