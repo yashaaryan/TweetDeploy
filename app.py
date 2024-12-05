@@ -42,10 +42,70 @@ def main_page():
     if request.method == "POST":
         text = request.form['text']
         prediction = predict_with_bert(text)
-        return f'<h2>Prediction: {prediction}</h2>'
+        return f'''
+        <html>
+            <head>
+                <title>Disaster Tweets</title>
+                <style>
+                    body {{
+                        font-family: Arial, sans-serif;
+                        text-align: center;
+                    }}
+                    input[type="text"] {{
+                        padding: 8px;
+                        margin: 10px;
+                        width: 250px;
+                        border: 1px solid #ccc;
+                    }}
+                    button {{
+                        padding: 8px 16px;
+                        background-color: #4CAF50;
+                        color: white;
+                        border: none;
+                        cursor: pointer;
+                    }}
+                    button:hover {{
+                        background-color: #45a049;
+                    }}
+                </style>
+            </head>
+            <body>
+                <h1>Disaster Tweets</h1>
+                <form action="/" method="post">
+                    <input type="text" name="text" placeholder="Enter tweet" maxlength="280" required/>
+                    <button type="submit" name="model_type" value="bert">Predict BERT</button>
+                </form>
+                <h2>Prediction: {prediction}</h2>
+            </body>
+        </html>
+        '''
     return '''
     <html>
-        <head><title>Disaster Tweets</title></head>
+        <head>
+            <title>Disaster Tweets</title>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    text-align: center;
+                }}
+                input[type="text"] {{
+                    padding: 8px;
+                    margin: 10px;
+                    width: 250px;
+                    border: 1px solid #ccc;
+                }}
+                button {{
+                    padding: 8px 16px;
+                    background-color: #4CAF50;
+                    color: white;
+                    border: none;
+                    cursor: pointer;
+                }}
+                button:hover {{
+                    background-color: #45a049;
+                }}
+            </style>
+        </head>
         <body>
             <h1>Disaster Tweets</h1>
             <form action="/" method="post">
