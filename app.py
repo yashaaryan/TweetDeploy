@@ -23,6 +23,9 @@ def preprocess_text(input_text):
     cleaned_text = re.sub(r'\W', ' ', str(input_text))
     cleaned_text = cleaned_text.lower()
     cleaned_text = ' '.join([word for word in cleaned_text.split() if word not in stop_words_list])
+    cleaned_text = re.sub(r'\W', ' ', str(input_text))
+    cleaned_text = cleaned_text.lower()
+    cleaned_text = ' '.join([word for word in cleaned_text.split() if word not in stop_words_list])
     return cleaned_text
 
 def process_input_sentence(input_sentence):
@@ -30,7 +33,12 @@ def process_input_sentence(input_sentence):
     tokenized_sentence = tokenizer_bert(processed_sentence, return_tensors="pt", padding=True, truncation=True, max_length=128)
     return tokenized_sentence
 
+def predict_with_lstm(sentence):
+    padded_sentence = process_input_sentence(sentence)
+    return model_lstm.predict(padded_sentence)
+
 def predict_with_bert(sentence):
+    sentence = preprocess_text(sentence)
     sentence = preprocess_text(sentence)
     inputs = tokenizer_bert(sentence, return_tensors="pt", padding=True, truncation=True, max_length=128)
     with torch.no_grad():
@@ -39,10 +47,13 @@ def predict_with_bert(sentence):
     predicted_class = torch.argmax(logits, dim=1).item()
     return "REAL" if predicted_class == 1 else "FAKE"
 
+    return "REAL" if predicted_class == 1 else "FAKE"
+
 @app.get("/", response_class=HTMLResponse)
 async def main_page():
     return '''
     <html>
+        <head><title>Disaster Tweets</title></head>
         <head><title>Disaster Tweets</title></head>
         <body>
             <h1>Disaster Tweets</h1>
