@@ -161,8 +161,8 @@ tokenizer_bert = BertTokenizer.from_pretrained('huawei-noah/TinyBERT_General_4L_
 
 
 # Cargar el dataset de pruebas
-train_dataset = pd.read_csv("train.csv", encoding="latin-1")
-test_dataset = pd.read_csv("test.csv", encoding="latin-1")
+train_dataset = pd.read_csv("train.csv", encoding="latin-1").head(100)
+test_dataset = pd.read_csv("test.csv", encoding="latin-1").head(100)
 
 stop_words_list = stopwords.words('english')
 lemmatizer = WordNetLemmatizer()  # <-- Usamos lemmatizer en lugar de stemmer
