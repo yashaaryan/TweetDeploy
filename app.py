@@ -1,21 +1,24 @@
-import os
-from fastapi import FastAPI, Form
-from starlette.responses import HTMLResponse
+from flask import Flask, request, render_template_string
 import torch
 from transformers import BertTokenizer, BertForSequenceClassification
 import re
+import string
 import nltk
 
 # Download stopwords
 nltk.download('stopwords')
 nltk.download('punkt')
 
-app = FastAPI()
+app = Flask(__name__)
 
 # Load BERT model and tokenizer
-model_bert = BertForSequenceClassification.from_pretrained('huawei-noah/TinyBERT_General_4L_312D', num_labels=2)
-model_bert.load_state_dict(torch.load('bert_finetuned_model3.pth', map_location=torch.device('cpu')))
-tokenizer_bert = BertTokenizer.from_pretrained('huawei-noah/TinyBERT_General_4L_312D')
+def load_model():
+    model_bert = BertForSequenceClassification.from_pretrained('huawei-noah/TinyBERT_General_4L_312D', num_labels=2)
+    model_bert.load_state_dict(torch.load('bert_finetuned_model3.pth', map_location=torch.device('cpu')))
+    tokenizer_bert = BertTokenizer.from_pretrained('huawei-noah/TinyBERT_General_4L_312D')
+    return model_bert, tokenizer_bert
+
+model_bert, tokenizer_bert = load_model()
 
 stop_words_list = nltk.corpus.stopwords.words('english')
 
@@ -34,14 +37,18 @@ def predict_with_bert(sentence):
     predicted_class = torch.argmax(logits, dim=1).item()
     return "REAL" if predicted_class == 1 else "FAKE"
 
-@app.get("/", response_class=HTMLResponse)
-async def main_page():
+@app.route("/", methods=["GET", "POST"])
+def main_page():
+    if request.method == "POST":
+        text = request.form['text']
+        prediction = predict_with_bert(text)
+        return f'<h2>Prediction: {prediction}</h2>'
     return '''
     <html>
         <head><title>Disaster Tweets</title></head>
         <body>
             <h1>Disaster Tweets</h1>
-            <form action="/predict" method="post">
+            <form action="/" method="post">
                 <input type="text" name="text" placeholder="Enter tweet" maxlength="280" required/>
                 <button type="submit" name="model_type" value="bert">Predict BERT</button>
             </form>
@@ -49,25 +56,5 @@ async def main_page():
     </html>
     '''
 
-@app.post('/predict', response_class=HTMLResponse)
-async def predict(text: str = Form(...), model_type: str = Form(...)):
-    # Ensure prediction is based on BERT
-    prediction = predict_with_bert(text)
-    
-    # Return structured HTML with the prediction
-    return f'''
-    <html>
-        <head><title>Prediction Result</title></head>
-        <body>
-            <h1>Prediction Result</h1>
-            <p>The tweet is classified as: <strong>{prediction}</strong></p>
-            <a href="/">Go back</a>
-        </body>
-    </html>
-    '''
-
-# Ensure the app binds to the right port
 if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8000))  # Get the port from environment variable, default to 8000
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    app.run(debug=True)
