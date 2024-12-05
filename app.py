@@ -10,6 +10,7 @@ import unicodedata
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 import nltk
+import gc
 import torch
 from transformers import BertTokenizer, BertForSequenceClassification
 
@@ -50,6 +51,10 @@ def remove_html_tags(text):
     """Remove HTML tags from the text."""
     html_pattern = re.compile(r'<.*?>|&(?:[a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
     return html_pattern.sub('', text)
+
+def unload_model(model):
+    del model
+    gc.collect() 
 
 def preprocess_text(input_text):
     """Clean and preprocess the input text."""
@@ -271,9 +276,11 @@ async def predict(text: str = Form(...), model_type: str = Form(...)):
         prediction = model_lstm.predict(processed_text)
         prediction_label = "REAL" if prediction >= 0.6 else "FAKE"
         probability = prediction[0][0] if prediction >= 0.6 else 1 - prediction[0][0]
+        unload_model(model_lstm)
     else:
         # Predecir con el modelo BERT
         prediction_label, probability = predict_with_bert(text)
+        unload_model(model_lstm)
     
     # Generar respuesta HTML con el resultado de la predicción
     return f"""
