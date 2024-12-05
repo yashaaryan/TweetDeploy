@@ -1,13 +1,7 @@
 fastapi
-pandas
-pydantic
-tensorflow-cpu
-uvicorn
-python-multipart
-starlette
-tensorflow
-nltk
 torch
 transformers
-gdown
+nltk
+python-multipart
+starlette
 gunicorn
