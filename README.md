@@ -7,7 +7,7 @@ The **Disaster Tweet Prediction** project leverages Natural Language Processing 
 
 - **Predict Disaster Tweets**: Classifies tweets about real disaster events.
 - **Interactive Web Form**: Allows users to input tweet data and get real-time predictions.
-- Utilizes **BERT and LSTM models** for accurate tweet classification.
+- Utilizes **BERT** for accurate tweet classification.
 
 ## Tech Stack
 
