@@ -13,8 +13,8 @@ The **Disaster Tweet Prediction** project leverages Natural Language Processing 
 
 - **Backend**: FastAPI (Python)
 - **Frontend**: HTML, JavaScript (Vanilla)
-- **Machine Learning Models**: LSTM and BERT
-- **Deployment**: Compatible with Render, Heroku, or any FastAPI-supporting server.
+- **Machine Learning Models**:  BERT
+- **Deployment**: Compatible with Render, Heroku,AVM or any FastAPI-supporting server.
 
 ## Requirements
 
